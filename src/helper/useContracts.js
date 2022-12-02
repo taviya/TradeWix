@@ -3,7 +3,6 @@ import StakeAbi from '../json/tokenstake.json';
 import {contract}  from './contract';
 import Multicall from '@dopex-io/web3-multicall';
 import {getWeb3} from './connectors';
-import tokenAbi from '../json/token.json';
 
 export const MulticallContract = (chainId) => {
   let multicallAddress = contract[chainId] ? contract[chainId].multicallAddress : contract['default'].multicallAddress; 
@@ -25,12 +24,6 @@ export const getStakingContract = (chainId) =>{
   let address = contract[chainId] ? contract[chainId].stakingAddress : contract['default'].stakingAddress;
   let web3 = getWeb3(chainId);
   return new web3.eth.Contract(StakeAbi, address);
-} 
-
-export const getTokenContract = (chainId) =>{
-  let address = contract[chainId] ? contract[chainId].tokenAddress : contract['default'].tokenAddress;
-  let web3 = getWeb3(chainId);
-  return new web3.eth.Contract(tokenAbi, address);
 } 
 
 

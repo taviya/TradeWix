@@ -11,65 +11,32 @@ import tokenAbi from '../json/token.json';
 import { contract } from '../helper/contract';
 import { getWeb3 } from '../helper/connectors';
 import sLogo from '../images/s-logo.png';
+import { ethers } from 'ethers';
 
 
 
 export default function Stake() {
-
-    const daysTab = {
-        links: [
-            {
-                id: 1,
-                className: "StakeTablinks",
-                content: "30 Days",
-                apy: "30",
-                timestamp: "30"
-            },
-            {
-                id: 2,
-                className: "StakeTablinks",
-                content: "90 Days",
-                apy: "50",
-                timestamp: "90"
-            },
-            {
-                id: 3,
-                className: "StakeTablinks",
-                content: "180 Days",
-                apy: "80",
-                timestamp: "180"
-            },
-            {
-                id: 4,
-                className: "StakeTablinks",
-                content: "365 Days",
-                apy: "120",
-                timestamp: "365"
-
-            }
-        ],
-        activeLink: null
-    };
-
     const { chainId, account, library } = useWeb3React();
-    const [dayId, setDayId] = useState(1);
+    const [dayId, setDayId] = useState(0);
     const [updater, setUpdater] = useState(new Date());
     const stats = useCommonStats(updater);
     const accStats = useAccountStats(updater);
-    const [apy, setApy] = useState(daysTab.links[0].apy);
     const [btndisabled, setBtndisabled] = useState(false);
     const [amount, setAmount] = useState(0);
     const [error_msg, setError_msg] = useState('');
     const [ereturn, setEreturn] = useState(0);
     const timeElapsed = Date.now();
     const today = new Date(timeElapsed);
-    const [endtime, setEndtime] = useState(new Date(parseInt(timeElapsed) + parseInt(daysTab.links[0].timestamp * 86400 * 1000)));
     const [loading, setLoading] = useState(false);
 
     const handleChangeDay = (id) => {
-        setDayId(id);
-        setApy(daysTab.links[id - 1].apy)
-        setEndtime(new Date(parseInt(timeElapsed) + parseInt(daysTab.links[id - 1].timestamp * 86400 * 1000)))
+        console.log(id);
+        try{
+            if(id < 0 &&  id > 3) return;
+            setDayId(id >= 0 && id <= 3 ? id : 0);
+        }catch(err){
+            console.log(err.message);
+        }
     }
 
     const handleChangeAmount = (e) => {
@@ -85,6 +52,10 @@ export default function Stake() {
             setError_msg('Amount must be greater than zero');
             setBtndisabled(true);
         }
+        else if(parseFloat(e.target.value) > parseFloat(accStats.balance)){
+            setError_msg('you don\'t have enough fund in wallet');
+            setBtndisabled(true);
+        }
         else {
             setError_msg('');
             setBtndisabled(false);
@@ -98,36 +69,32 @@ export default function Stake() {
             if (chainId) {
                 try {
                     setLoading(true);
-
-                    let tokenAddress = contract[chainId] ? contract[chainId].tokenAddress : contract['default'].tokenAddress;
                     let tokenStakingAddress = contract[chainId] ? contract[chainId].stakingAddress : contract['default'].stakingAddress;
 
-                    let tokenContract = getContract(tokenAbi, tokenAddress, library);
+                    let tokenContract = getContract(tokenAbi, stats.tokenAddress, library);
                     let amount = parseEther('100000000000000000000000').toString();
                     let tx = await tokenContract.approve(tokenStakingAddress, amount, { 'from': account });
-                    const resolveAfter3Sec = new Promise(resolve => setTimeout(resolve, 5000));
-                    toast.promise(
-                        resolveAfter3Sec,
-                        {
-                            pending: 'Waiting for confirmation 👌',
-                        }
-                    )
+                    toast.loading('Waiting for confirmation..');
+                    
                     var interval = setInterval(async function () {
                         let web3 = getWeb3(chainId);
                         var response = await web3.eth.getTransactionReceipt(tx.hash);
                         if (response != null) {
                             clearInterval(interval)
                             if (response.status === true) {
+                                toast.dismiss();
                                 toast.success('success ! your last transaction is success 👍');
                                 setUpdater(new Date());
                                 setLoading(false);
                             }
                             else if (response.status === false) {
+                                toast.dismiss();
                                 toast.error('error ! Your last transaction is failed.');
                                 setUpdater(new Date());
                                 setLoading(false);
                             }
                             else {
+                                toast.dismiss();
                                 toast.error('error ! something went wrong.');
                                 setUpdater(new Date());
                                 setLoading(false);
@@ -137,7 +104,8 @@ export default function Stake() {
 
                 }
                 catch (err) {
-                    typeof err.data !== 'undefined' ? toast.error(err.data.message) : toast.error(err.message);
+                    toast.dismiss();
+                    toast.error(err.reason ? err.reason : err.message )
                     setLoading(false);
                 }
             }
@@ -162,19 +130,12 @@ export default function Stake() {
                     if (chainId) {
                         if (parseFloat(accStats.balance) >= parseFloat(amount)) {
                             if (typeof dayId !== 'undefined' || dayId !== 0) {
-                                let lockupDuration = daysTab.links[dayId - 1].timestamp;
                                 let tokenStakingAddress = contract[chainId] ? contract[chainId].stakingAddress : contract['default'].stakingAddress;
                                 let stakeContract = getContract(stakeAbi, tokenStakingAddress, library);
-                                let stakeAmount = amount * Math.pow(10, stats.tokenDecimal);
+                                let stakeAmount = ethers.utils.parseUnits(amount.toString(),stats.tokenDecimal);
 
-                                let tx = await stakeContract.deposit(stakeAmount.toString(), lockupDuration, { 'from': account });
-                                const resolveAfter3Sec = new Promise(resolve => setTimeout(resolve, 5000));
-                                toast.promise(
-                                    resolveAfter3Sec,
-                                    {
-                                        pending: 'Waiting for confirmation 👌',
-                                    }
-                                )
+                                let tx = await stakeContract.deposit(stakeAmount.toString(), dayId, { 'from': account });
+                                toast.loading('Waiting for confirmation..');
 
                                 var interval = setInterval(async function () {
                                     let web3 = getWeb3(chainId);
@@ -182,16 +143,19 @@ export default function Stake() {
                                     if (response != null) {
                                         clearInterval(interval)
                                         if (response.status === true) {
+                                            toast.dismiss();
                                             toast.success('success ! your last transaction is success 👍');
                                             setUpdater(new Date());
                                             setLoading(false);
                                         }
                                         else if (response.status === false) {
+                                            toast.dismiss();
                                             toast.error('error ! Your last transaction is failed.');
                                             setUpdater(new Date());
                                             setLoading(false);
                                         }
                                         else {
+                                            toast.dismiss();
                                             toast.error('error ! something went wrong.');
                                             setUpdater(new Date());
                                             setLoading(false);
@@ -200,11 +164,13 @@ export default function Stake() {
                                 }, 5000);
                             }
                             else {
+                                toast.dismiss();
                                 toast.error('Please select days !');
                                 setLoading(false);
                             }
                         }
                         else {
+                            toast.dismiss();
                             toast.error('you don\'t have enough balance !');
                             setLoading(false);
                         }
@@ -226,16 +192,26 @@ export default function Stake() {
             }
         }
         catch (err) {
-            toast.error(err.reason);
+            toast.error(err.reason ? err.reason : err.message )
             setLoading(false);
         }
     }
 
+    const handleMaxButton = () =>{
+        setAmount(parseFloat(accStats.balance) > 1 ? parseFloat(accStats.balance) - 1 : 0);
+        setError_msg(parseFloat(accStats.balance) > 0 ? '' : 'Amount must be greater than zero' );
+        setBtndisabled(false);
+    }
 
     useEffect(() => {
-        setEreturn(parseFloat(amount) + parseFloat((amount * daysTab.links[dayId - 1].apy / 100) / 365) * daysTab.links[dayId - 1].timestamp);
+        try{
+            setEreturn((amount * stats.duration[dayId] * stats.bonous[dayId]) / (365*10000));
+        }
+        catch(err){
+            console.log(err.message);
+        }
         // eslint-disable-next-line
-    }, [amount, dayId])
+    }, [amount, dayId , stats])
 
 
     return (
@@ -245,7 +221,7 @@ export default function Stake() {
                     <div className="col-12">
                         <ul className="nav nav-pills mb-3" id="pills-tab" role="tablist">
                             <li className="nav-item" role="presentation">
-                                <a href="#sec" className="nav-link fs-21 active" >Stake BZEN
+                                <a href="#sec" className="nav-link fs-21 active" >Stake {stats.tokenSymbol ? stats.tokenSymbol : '-' }
                                 </a>
                             </li>
                         </ul>
@@ -257,7 +233,7 @@ export default function Stake() {
                                     <div className="col-sm-6">
                                         <div className="top-content d-flex flex-column gap-3 text-white justify-content-center align-items-center">
                                             <p>Total Token Staked</p>
-                                            <div className="fs-28 fw-bold">{formatPrice(stats.totalStake)} BZEN</div>
+                                            <div className="fs-28 fw-bold">{formatPrice(stats.totalStake)} {stats.tokenSymbol ? stats.tokenSymbol : '-' }</div>
                                         </div>
                                     </div>
                                     <div className="col-sm-6">
@@ -271,7 +247,19 @@ export default function Stake() {
                                     <div className="col-12">
                                         <div className="fs-28 mb-sm-5 mb-4">Staking Submission</div>
                                         <div className="d-flex staking-days flex-wrap flex-lg-nowrap">
-                                            {daysTab.links.map(link => {
+
+                                            {stats.duration.length > 0 && stats.bonous.length > 0 &&
+                                                stats.duration.map((rowdata,index)=>{
+                                                    return (
+                                                        <div key={index} onClick={(e) => { handleChangeDay(index) }} className={`${index === dayId ? " active" : ""} align-items-center w-100 d-flex flex-column item justify-content-center rounded-8 position-relative overflow-hidden`}>
+                                                            <div className="fs-21">{Math.floor(rowdata)} Days</div>
+                                                            <p>{stats.bonous[index] ? parseFloat(stats.bonous[index]/100) : 0}% APY</p>
+                                                        </div>
+    
+                                                    )
+                                                })
+                                            }
+                                            {/* {daysTab.links.map(link => {
                                                 return (
                                                     <div key={link.id} onClick={(e) => { handleChangeDay(link.id) }} className={`${link.id === dayId ? " active" : ""} align-items-center w-100 d-flex flex-column item justify-content-center rounded-8 position-relative overflow-hidden`}>
                                                         <div className="fs-21">{link.content}</div>
@@ -280,7 +268,7 @@ export default function Stake() {
 
                                                 )
                                             })
-                                            }
+                                            } */}
                                         </div>
                                     </div>
                                 </div>
@@ -292,12 +280,13 @@ export default function Stake() {
                                             </div>
                                             <div className="input-staked d-flex w-100 border rounded-8 p-2">
                                                 <input type="text" className="form-control border-0" value={amount} onChange={(e) => { handleChangeAmount(e) }} placeholder="Enter amount" />
+                                                <button className='max-btn' type='button' onClick={()=>handleMaxButton()}>MAX</button>
                                                 <img src={sLogo} className="img-fluid" alt="s-logo" style={{ "width": "51px" }} />
                                             </div>
                                         </div>
                                         <h5 className='fs-21 mt-2 fw-normal mb-4 mb-sm-5 ml-254 text-danger mt-3'><small>{error_msg}</small></h5>
 
-                                        <div className="fs-21 mt-2 fw-normal mb-4 mb-sm-5 ml-254">BZEN Balance: {formatPrice(accStats.balance)} BZEN</div>
+                                        <div className="fs-21 mt-2 fw-normal mb-4 mb-sm-5 ml-254">Balance: {formatPrice(accStats.balance)} {stats.tokenSymbol ? stats.tokenSymbol : '-' }</div>
 
                                         <div className="fs-21 mt-2 fw-bold mb-3 mb-sm-4 ml-254 ml-0">Staking Summary</div>
 
@@ -306,22 +295,22 @@ export default function Stake() {
                                                 <div>
                                                     <div>Duration</div>
                                                     <div>:</div>
-                                                    <div>{daysTab.links[dayId - 1].content}</div>
+                                                    <div>{stats.duration[dayId] ?  stats.duration[dayId] : 0} Days</div>
                                                 </div>
                                                 <div>
                                                     <div>APY</div>
                                                     <div>:</div>
-                                                    <div>{apy}%</div>
+                                                    <div>{stats.bonous[dayId] ?  stats.bonous[dayId] / 100 : 0}%</div>
                                                 </div>
                                                 <div>
                                                     <div>Stake Amount</div>
                                                     <div>:</div>
-                                                    <div>{formatPrice(amount)} BZEN</div>
+                                                    <div>{formatPrice(amount)} {stats.tokenSymbol ? stats.tokenSymbol : '-' }</div>
                                                 </div>
                                                 <div>
                                                     <div>Estimated Return</div>
                                                     <div>:</div>
-                                                    <div>{formatPrice(ereturn)} BZEN</div>
+                                                    <div>{formatPrice(ereturn)} {stats.tokenSymbol ? stats.tokenSymbol : '-' }</div>
                                                 </div>
                                                 <div>
                                                     <div>Start Date</div>
@@ -331,14 +320,14 @@ export default function Stake() {
                                                 <div>
                                                     <div>End Date</div>
                                                     <div>:</div>
-                                                    <div>{endtime.toUTCString()}</div>
+                                                    <div>{new Date(parseInt(timeElapsed) + parseInt(stats.duration[dayId] * 86400 * 1000)).toUTCString()}</div>
                                                 </div>
                                             </div>
                                             {parseFloat(accStats.isApprove) <= 1000000000 ? (
-                                                <Button loading={loading} className="confirm-btn btn btn-primary h-48 w-100 my-4 my-sm-5" onClick={(e) => handleApprove(e)}>APPROVE
+                                                <Button loading={loading} className="confirm-btn my-4 my-sm-5" onClick={(e) => handleApprove(e)}>APPROVE
                                                 </Button>
                                             ) : (
-                                                <Button disabled={btndisabled} loading={loading} className="confirm-btn btn btn-primary h-48 w-100 my-4 my-sm-5" onClick={(e) => handleStake(e)}>STAKE NOW
+                                                <Button disabled={btndisabled} loading={loading} className="confirm-btn my-4 my-sm-5" onClick={(e) => handleStake(e)}>STAKE NOW
                                                 </Button>
                                             )}
                                         </div>

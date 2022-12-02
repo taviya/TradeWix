@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { formatPrice } from '../helper/useContracts';
-import { useAccountStats } from '../hooks/useStats';
+import { useAccountStats , useCommonStats } from '../hooks/useStats';
 import { useWeb3React } from '@web3-react/core';
 import { getStakingContract } from '../helper/useContracts';
 import { getContract } from '../helper/contractHelper';
@@ -17,6 +17,7 @@ export default function MyStake() {
     const { chainId, account, library } = useWeb3React();
     const [updater, setUpdater] = useState(new Date());
     const accStats = useAccountStats(updater);
+    const stats = useCommonStats(updater);
     const [orders, setOrders] = useState([]);
     const [wloading, setWloading] = useState(false);
     // const [croading, setCroading] = useState(false);
@@ -35,16 +36,17 @@ export default function MyStake() {
                 Promise.all(data_array.map(async (index) => {
                     const getdata = await stakecontract.methods.orders(index).call();
                     const pendingReward = await stakecontract.methods.pendingRewards(index).call();
+                    
                     const object = {
-                        amount: getdata.amount.toString() / Math.pow(10, 9),
-                        lockupDuration: getdata.lockupDuration.toString(),
-                        returnPer: getdata.returnPer.toString(),
+                        amount: getdata.amount.toString() / Math.pow(10, 18),
+                        lockupDuration: getdata.Duration.toString(),
+                        returnPer: getdata.Bonus.toString(),
                         starttime: getdata.starttime.toString(),
                         endtime: getdata.endtime.toString(),
                         claimedReward: getdata.claimedReward.toString(),
                         claimed: getdata.claimed.toString(),
                         orderId: index,
-                        pendingReward: pendingReward / Math.pow(10, 9 )
+                        pendingReward: pendingReward / Math.pow(10, 18 )
                     }
                     return object;
                 })).then((result) => {
@@ -62,7 +64,7 @@ export default function MyStake() {
                 Promise.all(data_array.map(async (index) => {
                     const pendingReward = await stakecontract.methods.pendingRewards(index).call();
                     const object = {
-                        pendingReward: pendingReward / Math.pow(10, 9)
+                        pendingReward: pendingReward / Math.pow(10, 18)
                     }
                     return object;
                 })).then((result) => {
@@ -82,7 +84,7 @@ export default function MyStake() {
             }, 60000);
         }
         // eslint-disable-next-line
-    }, [account, chainId, refresh]);
+    }, [account, chainId, refresh,stats]);
 
 
 
@@ -97,13 +99,7 @@ export default function MyStake() {
                     let tokenStakingAddress = contract[chainId] ? contract[chainId].stakingAddress : contract['default'].stakingAddress;
                     let stakeContract = getContract(stakeAbi, tokenStakingAddress, library);
                     let tx = await stakeContract.withdraw(orderId, { 'from': account });
-                    const resolveAfter3Sec = new Promise(resolve => setTimeout(resolve, 5000));
-                    toast.promise(
-                        resolveAfter3Sec,
-                        {
-                            pending: 'Waiting for confirmation 👌',
-                        }
-                    )
+                    toast.loading('Waiting for confirmation..');
 
                     var interval = setInterval(async function () {
                         let web3 = getWeb3(chainId);
@@ -111,17 +107,20 @@ export default function MyStake() {
                         if (response != null) {
                             clearInterval(interval)
                             if (response.status === true) {
+                                toast.dismiss();
                                 toast.success('success ! your last transaction is success 👍');
                                 setUpdater(new Date());
                                 setWloading(false);
                                 setRefersh(new Date())
                             }
                             else if (response.status === false) {
+                                toast.dismiss();
                                 toast.error('error ! Your last transaction is failed.');
                                 setUpdater(new Date());
                                 setWloading(false);
                             }
                             else {
+                                toast.dismiss();
                                 toast.error('error ! something went wrong.');
                                 setUpdater(new Date());
                                 setWloading(false);
@@ -142,7 +141,8 @@ export default function MyStake() {
 
         }
         catch (err) {
-            toast.error(err.reason);
+            toast.dismiss();
+            toast.error(err.reason ? err.reason : err.message )
             setWloading(false);
         }
     }
@@ -157,13 +157,7 @@ export default function MyStake() {
                     let tokenStakingAddress = contract[chainId] ? contract[chainId].stakingAddress : contract['default'].stakingAddress;
                     let stakeContract = getContract(stakeAbi, tokenStakingAddress, library);
                     let tx = await stakeContract.emergencyWithdraw(orderId, { 'from': account });
-                    const resolveAfter3Sec = new Promise(resolve => setTimeout(resolve, 5000));
-                    toast.promise(
-                        resolveAfter3Sec,
-                        {
-                            pending: 'Waiting for confirmation 👌',
-                        }
-                    )
+                    toast.loading('Waiting for confirmation..');
 
                     var interval = setInterval(async function () {
                         let web3 = getWeb3(chainId);
@@ -171,17 +165,20 @@ export default function MyStake() {
                         if (response != null) {
                             clearInterval(interval)
                             if (response.status === true) {
+                                toast.dismiss();
                                 toast.success('success ! your last transaction is success 👍');
                                 setUpdater(new Date());
                                 setEmloading(false);
                                 setRefersh(new Date())
                             }
                             else if (response.status === false) {
+                                toast.dismiss();
                                 toast.error('error ! Your last transaction is failed.');
                                 setUpdater(new Date());
                                 setEmloading(false);
                             }
                             else {
+                                toast.dismiss();
                                 toast.error('error ! something went wrong.');
                                 setUpdater(new Date());
                                 setEmloading(false);
@@ -202,6 +199,7 @@ export default function MyStake() {
 
         }
         catch (err) {
+            toast.dismiss();
             toast.error(err.reason);
             setEmloading(false);
         }
@@ -226,14 +224,14 @@ export default function MyStake() {
                                         <div className="top-content d-flex flex-column gap-3 text-white justify-content-center align-items-center">
                                             <p>Total Staked</p>
                                             <div className="fs-28 fw-bold">{formatPrice(accStats.totalStake)}</div>
-                                            <small>BZEN</small>
+                                            <small>{stats.tokenSymbol ? stats.tokenSymbol : '-'}</small>
                                         </div>
                                     </div>
                                     <div className="col-sm-6">
                                         <div className="top-content info d-flex flex-column gap-3 text-white justify-content-center align-items-center">
                                             <p>Total Earning</p>
                                             <div className="fs-28 fw-bold">{formatPrice(accStats.totalRewardEarn)}</div>
-                                            <small>BZEN</small>
+                                            <small>{stats.tokenSymbol ? stats.tokenSymbol : '-'}</small>
                                         </div>
                                     </div>
                                 </div>
@@ -274,20 +272,20 @@ export default function MyStake() {
                                                                             <p>Total Staked</p>
                                                                             <div className="align-items-center d-flex fs-21 fw-bold gap-1 justify-content-center">
                                                                                 {formatPrice(row.amount)}
-                                                                                <small className="fs-12">BZEN</small>
+                                                                                <small className="fs-12">{stats.tokenSymbol ? stats.tokenSymbol : '-'}</small>
                                                                             </div>
                                                                         </div>
                                                                         <div className="rounded-8 py-3">
                                                                             <p>Pending Rewards</p>
                                                                             <div className="align-items-center d-flex fs-21 fw-bold gap-1 justify-content-center">
                                                                                 {formatPrice(rewardcal[index] ?  rewardcal[index].pendingReward : 'waiting..')}
-                                                                                <small className="fs-12">BZEN</small>
+                                                                                <small className="fs-12">{stats.tokenSymbol ? stats.tokenSymbol : '-'}</small>
                                                                             </div>
                                                                         </div>
                                                                         <div className="rounded-8 py-3">
                                                                             <p>Time Left</p>
                                                                             <div className="align-items-center d-flex fs-21 fw-bold gap-1 justify-content-center">
-                                                                                {Math.round(Math.abs((row.endtime - row.starttime) / 86400))}
+                                                                                { row.endtime > currentTime ? Math.round(Math.abs((row.endtime - currentTime) / 86400)) : 0}
                                                                                 <small className="fs-12">days</small>
                                                                             </div>
                                                                         </div>
@@ -298,7 +296,7 @@ export default function MyStake() {
                                                                             disabled={(row.endtime <= currentTime) ? false : true}
                                                                             loading={wloading}
                                                                             variant="none"
-                                                                            className="btn btn-secondary text-white py-1 mx-3 my-3 text-center"
+                                                                            className="btn btn-secondary py-1 mx-3 my-3 text-center"
                                                                             onClick={(e) => handleWithdraw(e, row.orderId)}
                                                                         >
                                                                             Claim Now
@@ -317,7 +315,7 @@ export default function MyStake() {
                                                                             loading={emloading}
                                                                             disabled={(row.endtime > currentTime) ? false : true}
                                                                             variant="none"
-                                                                            className="btn btn-secondary text-white py-1 mx-3 my-3 text-center"
+                                                                            className="btn btn-secondary py-1 mx-3 my-3 text-center"
                                                                             onClick={(e) => handleEmergencyWithdraw(e, row.orderId)}
                                                                         >
                                                                             Emergency Withdraw
@@ -336,7 +334,7 @@ export default function MyStake() {
                                                                     <div>{new Date(row.starttime * 1000).toString().substring(4, 25)}</div>
                                                                     <div>{formatPrice(row.amount)}</div>
                                                                     <div>{new Date(row.endtime * 1000).toString().substring(4, 25)}</div>
-                                                                    <button className="btn btn-outline-secondary py-1 text-success " style={{ "border": "1px solid green" }} data-bs-toggle="collapse"
+                                                                    <button className="btn btn-outline-secondary py-1" data-bs-toggle="collapse"
                                                                         data-bs-target={`#heading-${index + 1}`} aria-expanded="false"
                                                                         aria-controls={`heading-${index + 1}`}>
                                                                         Claimed
@@ -352,14 +350,14 @@ export default function MyStake() {
                                                                                 <p>Total Staked</p>
                                                                                 <div className="align-items-center d-flex fs-21 fw-bold gap-1 justify-content-center">
                                                                                     {formatPrice(row.amount)}
-                                                                                    <small className="fs-12">BZEN</small>
+                                                                                    <small className="fs-12">{stats.tokenSymbol ? stats.tokenSymbol : '-'}</small>
                                                                                 </div>
                                                                             </div>
                                                                             <div className="rounded-8 py-3">
                                                                                 <p>Pending Rewards</p>
                                                                                 <div className="align-items-center d-flex fs-21 fw-bold gap-1 justify-content-center">
                                                                                     {formatPrice(row.pendingReward)}
-                                                                                    <small className="fs-12">BZEN</small>
+                                                                                    <small className="fs-12">{stats.tokenSymbol ? stats.tokenSymbol : '-'}</small>
                                                                                 </div>
                                                                             </div>
                                                                             <div className="rounded-8 py-3">
@@ -375,10 +373,10 @@ export default function MyStake() {
                                                                             {/* <button className="btn btn-secondary text-white py-1 mx-3 my-3 text-center disabled">
                                                                                 Withdraw
                                                                             </button> */}
-                                                                            <button className="btn btn-secondary text-white py-1 mx-3 my-3 text-center disabled">
+                                                                            <button className="btn btn-secondary py-1 mx-3 my-3 text-center disabled">
                                                                                 Claim Now
                                                                             </button>
-                                                                            <button className="btn btn-secondary text-white py-1 mx-3 my-3 text-center disabled">
+                                                                            <button className="btn btn-secondary py-1 mx-3 my-3 text-center disabled">
                                                                                 Emergency Withdraw
                                                                             </button>
                                                                         </div>

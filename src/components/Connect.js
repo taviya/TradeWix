@@ -18,6 +18,8 @@ import trust from '../images/trust.png';
 import { Modal, Col, Row, Card , Menu , Dropdown , Button } from 'antd';
 import { useAccountStats } from "../hooks/useStats";
 import { formatPrice } from "../helper/useContracts";
+import { supportNetwork } from "../helper/network";
+import { useCommonStats } from "../hooks/useStats";
 
 
 
@@ -29,6 +31,7 @@ export const Connect = function () {
     // const [networkshow, setNetworkshow] = useState(false);
     const [isModalVisible, setIsModalVisible] = useState(false);
     let accStats = useAccountStats(1); 
+    let stats = useCommonStats(1); 
     const showModal = () => {
         setIsModalVisible(true);
     };
@@ -55,7 +58,7 @@ export const Connect = function () {
             window.open(metamaskAppDeepLink)
         }
         if (error instanceof UnsupportedChainIdError) {
-            return <span className="btn-text" onClick={(e) => switchNetwork(97)}>
+            return <span className="btn-text" onClick={(e) => switchNetwork(supportNetwork['default'].chainId)}>
                 <img src={wrongNetwork} alt="wrong-network" height="17px" width="17px" className="mx-2" />Wrong Network</span>;
         }
 
@@ -65,7 +68,7 @@ export const Connect = function () {
     const activating = (connection) => connection === activatingConnector;
     const connected = (connection) => connection === connector;
 
-    const switchNetwork = (networkid=97) => {
+    const switchNetwork = (networkid=56) => {
         try {
             // @ts-ignore
             window.ethereum.request({
@@ -84,7 +87,7 @@ export const Connect = function () {
                     key: '1',
                     label: (
                         <span>
-                            {formatPrice(accStats.balance)} BZEN
+                            {formatPrice(accStats.balance)} {stats.tokenSymbol ? stats.tokenSymbol : '-'}
                         </span>
                     ),
                 },
@@ -148,93 +151,6 @@ export const Connect = function () {
                 </>
             }
 
-
-            {/* <Modal
-                show={show}
-                onHide={() => setShow(false)}
-                aria-labelledby="example-modal-sizes-title-lg"
-            >
-                <Modal.Header closeButton>
-                    <Modal.Title>Connect to a wallet</Modal.Title>
-                </Modal.Header>
-                <Modal.Body>
-                    <div className="container">
-                        <div className="row">
-                            <div className="col-12">
-                                <button className="btn btn-dark modal-btn-connect" onClick={() => {
-                                    activate(injected);
-                                    setShow(false);
-                                }}>
-                                    <div className="div-modal-btn">
-                                        <img src={metaMask} alt="Meta-mask-Im" className="modal-img" />
-                                        <div className="text-modal-line">Metamask</div>
-                                    </div>
-                                </button>
-                            </div>
-                            <div className="col-12">
-                                <button className="btn btn-dark modal-btn-connect" onClick={() => {
-                                    activate(injected);
-                                    setShow(false);
-                                }}>
-                                    <div className="div-modal-btn">
-                                        <img src={trust} alt="Meta-mask-Im" className="modal-img" />
-                                        <div className="text-modal-line">TrustWallet</div>
-                                    </div>
-                                </button>
-                            </div>
-                            <div className="col-12">
-                                <button className="btn btn-dark modal-btn-connect" onClick={() => {
-                                    activate(walletconnect);
-                                    setShow(false);
-                                }}>
-                                    <div className="div-modal-btn">
-                                        <img src={wallet} alt="walletConnect" className="modal-img" />
-                                        <div className="text-modal-line">WalletConnect</div>
-                                    </div>
-                                </button>
-                            </div>
-                            <div className="col-12">
-                                <button className="btn btn-dark modal-btn-connect" onClick={() => {
-                                    activate(coinbaseWallet);
-                                    setShow(false);
-                                }}>
-                                    <div className="div-modal-btn">
-                                        <img src={coinbase} alt="coinbase" className="modal-img" />
-                                        <div className="text-modal-line">Coinbase</div>
-                                    </div>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </Modal.Body>
-            </Modal>
-
-            <Modal
-                show={networkshow}
-                onHide={() => setNetworkshow(false)}
-                aria-labelledby="example-modal-sizes-title-lg"
-            >
-                <Modal.Header closeButton>
-                    <Modal.Title>Select a Network</Modal.Title>
-                </Modal.Header>
-                <Modal.Body>
-                    <div className="container">
-                        <div className="row">
-                            <div className="col-12">
-                                <button className="btn btn-dark modal-btn-connect" onClick={() => {
-                                    switchNetwork(56);
-                                    setNetworkshow(false);
-                                }}>
-                                    <div className="div-modal-btn">
-                                        <img src={bscImage} alt="Meta-mask-Im" className="modal-img" />
-                                        <div className="text-modal-line">Binance</div>
-                                    </div>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </Modal.Body>
-            </Modal> */}
             <Modal title="Connect to a wallet" visible={isModalVisible} onCancel={handleCancel} footer={[]}>
                 <div className="site-card-wrapper">
                     <Row gutter={16}>
