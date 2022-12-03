@@ -62,7 +62,7 @@ export default function Header() {
                         <div className="offcanvas offcanvas-start" tabIndex="-1" id="offcanvasExample" aria-labelledby="offcanvasExampleLabel">
                             <div className="offcanvas-header">
                                 <a className="navbar-brand p-0" href="#sec" target="_blank" rel="noreferrer">
-                                    <img src={logoBlack} style={{ "height": "70px" }} className="lazy mobile-logo" alt="logo-blkc" />
+                                    <img src={logoBlack} style={{ "height": "35px" }} className="lazy mobile-logo" alt="logo-blkc" />
                                 </a>
                                 <button type="button" className="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
                             </div>
