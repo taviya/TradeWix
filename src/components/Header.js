@@ -22,7 +22,7 @@ export default function Header() {
                     <div className="col-12">
                         <nav className="navbar navbar-expand-lg navbar-light p-0">
                             <div className="container-fluid">
-                                <button className="navbar-toggler" type="button" data-bs-toggle="offcanvas"
+                                <button className="navbar-toggler bg-dark" type="button" data-bs-toggle="offcanvas"
                                     data-bs-target="#offcanvasExample" aria-controls="offcanvasExample">
                                     <span className="navbar-toggler-icon"></span>
                                 </button>
@@ -64,7 +64,7 @@ export default function Header() {
                                 <a className="navbar-brand p-0" href="#sec" target="_blank" rel="noreferrer">
                                     <img src={logoBlack} style={{ "height": "35px", "margin-top": "7%" }} className="lazy mobile-logo" alt="logo-blkc" />
                                 </a>
-                                <button type="button" className="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+                                <button type="button" className="btn-close text-reset bg-dark" data-bs-dismiss="offcanvas" aria-label="Close"></button>
                             </div>
                             <div className="offcanvas-body">
                                 <ul className="navbar-nav ms-auto mb-2 mb-lg-0">
